@@ -118,6 +118,29 @@ a{color:inherit;}
 @media (max-width:880px){
   .sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border);}
 }
+.githublink{
+  width:100%;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  font:inherit;
+  font-size:14px;
+  font-weight:700;
+  padding:8px 14px;
+  border-radius:99px;
+  cursor:pointer;
+  border:1px solid var(--border);
+  background:var(--surface-alt);
+  color:var(--ink);
+  white-space:nowrap;
+  text-decoration:none;
+  transition:.15s;
+  margin-bottom:16px;
+}
+.githublink:hover{background:var(--border);}
+.githublink svg{width:18px;height:18px;fill:currentColor;flex:none;}
 .brand{
   font-family:"Cinzel","Noto Serif TC",serif;
   font-size:14px;
@@ -309,8 +332,9 @@ h1{
   position:absolute;
   top:110%;
   left:50%;
-  transform:translateX(-50%);
+  transform:translateX(calc(-50% + var(--tip-shift-x, 0px)));
   width:280px;
+  max-width:calc(100vw - 24px);
   background:var(--tip-bg);
   color:var(--tip-ink);
   border:1px solid var(--tip-border);
@@ -324,6 +348,10 @@ h1{
   box-shadow:0 10px 30px rgba(0,0,0,.35);
   z-index:20;
   pointer-events:none;
+}
+.tooltip.tip-flip-up{
+  top:auto;
+  bottom:110%;
 }
 .tooltip .tip-name{
   font-weight:700;
@@ -339,13 +367,14 @@ h1{
   margin-left:6px;
 }
 .cell:not(.empty):hover .tooltip{display:block;}
-
-.pad:nth-child(4) .tooltip{left:auto;right:0;transform:none;}
-.pad:nth-child(1) .tooltip{left:0;transform:none;}
 </style>
 
 <div class="layout">
   <nav class="sidebar">
+    <a class="githublink" href="https://github.com/kaku1130/FF14" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      github.com
+    </a>
     <p class="brand">FINAL FANTASY XIV</p>
     <p class="brand-sub">全職業熱鍵排列參考</p>
     <div id="navRoot"></div>
@@ -441,6 +470,36 @@ function buildRow(job, rowCells, rowIndex) {
   );
 }
 
+function positionTooltip(cell) {
+  const tip = cell.querySelector('.tooltip');
+  if (!tip) return;
+  tip.style.removeProperty('--tip-shift-x');
+  tip.classList.remove('tip-flip-up');
+
+  const margin = 10;
+  const cellRect = cell.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+
+  let shiftX = 0;
+  if (tipRect.right > window.innerWidth - margin) {
+    shiftX -= tipRect.right - (window.innerWidth - margin);
+  }
+  if (tipRect.left + shiftX < margin) {
+    shiftX = margin - tipRect.left;
+  }
+  if (shiftX) tip.style.setProperty('--tip-shift-x', shiftX + 'px');
+
+  const roomBelow = window.innerHeight - cellRect.bottom - margin;
+  const roomAbove = cellRect.top - margin;
+  if (tipRect.height > roomBelow && roomAbove > roomBelow) tip.classList.add('tip-flip-up');
+}
+
+function attachTooltipPositioning() {
+  document.querySelectorAll('.cell:not(.empty)').forEach(cell => {
+    cell.addEventListener('mouseenter', () => positionTooltip(cell));
+  });
+}
+
 function renderJob(slug) {
   const job = JOBS_DATA[slug];
   if (!job) return;
@@ -450,6 +509,7 @@ function renderJob(slug) {
   document.querySelectorAll('.nav-job').forEach(el => {
     el.classList.toggle('active', el.dataset.slug === slug);
   });
+  attachTooltipPositioning();
   try { localStorage.setItem('ffxiv-hotbar-job', slug); } catch(e) {}
 }
 
